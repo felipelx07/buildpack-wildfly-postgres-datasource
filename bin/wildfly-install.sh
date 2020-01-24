@@ -14,7 +14,7 @@ WILDFLY_VERSION="18.0.0.Final"
 WILDFLY_SHA1="2d4778b14fda6257458a26943ea82988e3ae6a66"
 POSTGRESL_DRIVER_VERSION="42.2.5"
 POSTGRES_DRIVER_SHA1="951b7eda125f3137538a94e2cbdcf744088ad4c2"
-JBOSS_HOME=".jboss/wildfly-${WILDFLY_VERSION}"
+JBOSS_HOME="/opt/wildfly-${WILDFLY_VERSION}"
 
 
 printf -- "#######################################################################\n"
@@ -24,14 +24,14 @@ printf -- "#####################################################################
 
 cd $BUILD_DIR
 
-rm -rf .jboss
-mkdir -p .jboss
+rm -rf $JBOSS_HOME
+mkdir -p $JBOSS_HOME
 
 printf -- ".\n"
 printf -- "..\n"
 printf -- "...\n"
 printf -- "------------------------------------------------------------------------------\n"
-printf -- "Installing Wildfly ${WILDFLY_VERSION}...\n"
+printf -- "Installing Wildfly ${WILDFLY_VERSION}\n"
 printf -- "------------------------------------------------------------------------------\n"
 if [ -f "$wildfly-$WILDFLY_VERSION.tar.gz" ]; then
 	printf -- "File already downloaded...\n"
@@ -55,7 +55,7 @@ rm wildfly-$WILDFLY_VERSION.tar.gz
 printf -- "----> done\n"
 
 printf -- "------------------------------------------------------------------------------\n"
-printf -- "Installing PostgreSQL Wildfly module...\n"
+printf -- "Installing PostgreSQL Wildfly module\n"
 printf -- "------------------------------------------------------------------------------\n"
 if [ -f "$postgresql-$POSTGRESL_DRIVER_VERSION.jar" ]; then
 	printf -- "----> PostgreSQL Driver already downloaded...\n"
@@ -71,9 +71,9 @@ mv postgresql-$POSTGRESL_DRIVER_VERSION.jar $JBOSS_HOME
 printf -- "----> moved\n"
 
 printf -- "..............................................................................\n"
-printf -- " Initializing and waiting for wildfly standalone gets up...\n"
+printf -- " Initializing and waiting for wildfly standalone gets up\n"
 printf -- "..............................................................................\n"
-nohup $JBOSS_HOME/bin/standalone.sh -b=0.0.0.0 -Djboss.http.port=8080 > /dev\null 2>&1 &
+sh $JBOSS_HOME/bin/standalone.sh -b=0.0.0.0 -Djboss.http.port=8080 > /dev\null 2>&1 &
 until $(curl --output /dev\null --silent --head --fail http://localhost:8080); do echo '.'; sleep 5; done
 
 cat << EOF > /tmp/wildfly-postgresql-installer
@@ -89,9 +89,9 @@ printf -- "-----> PostgreSQL wildfly module installed successfully\n"
 $JBOSS_HOME/bin/jboss-cli.sh --connect command=:shutdown
 printf -- "-----> Disconnect with jboss-cli...\n"
 
-printf -- "-----> Coping configured standalone.xml to $JBOSS_HOME/standalone/configuration/\n"
+printf -- "Coping configured standalone.xml to $JBOSS_HOME/standalone/configuration/\n"
 cp /opt/buildpack-wildfly-postgres-datasource/standalone/standalone.xml $JBOSS_HOME/standalone/configuration/
-printf -- ".:standalone.xml datasource configured:.\n"
+printf -- "standalone.xml datasource configured\n"
 rm $JBOSS_HOME/postgresql-$POSTGRESL_DRIVER_VERSION.jar
 printf -- "-----> done\n"
 
@@ -105,9 +105,29 @@ web: \$JBOSS_HOME/bin/standalone.sh -b=0.0.0.0 -Djboss.http.port=\$PORT
 EOF
 fi
 
-#cat << EOF > $BUILD_DIR/.profile.d/jboss.sh
-#export JBOSS_HOME=${JBOSS_HOME}
-#EOF
+printf -- "------------------------------------------------------------------------------\n"
+printf -- "Create wildfly service on init.d
+printf -- "------------------------------------------------------------------------------\n"
+
+groupadd -r wildfly
+useradd -r -g wildfly -d $JBOSS_HOME -s /sbin/nologin wildfly
+chown -RH wildfly: $JBOSS_HOME
+
+ mkdir /etc/wildfly
+ cp $JBOSS_HOME/docs/contrib/scripts/systemd/wildfly.conf /etc/wildfly/
+ cp $JBOSS_HOME/docs/contrib/scripts/systemd/wildfly.service /etc/systemd/system/
+ cp $JBOSS_HOME/docs/contrib/scripts/systemd/launch.sh $JBOSS_HOME/bin/
+
+ systemctl enable wildfly
+ systemctl start wildfly
+
+
+cat << EOF > $BUILD_DIR/etc/default/wildfly.conf
+export JBOSS_HOME=${JBOSS_HOME}
+EOF
+
+printf -- "----> done!
+
 
 printf -- "#######################################################################\n"
 printf -- "##                    EVERYTHING'S ALLRIGHT NOW!                     ##\n"
