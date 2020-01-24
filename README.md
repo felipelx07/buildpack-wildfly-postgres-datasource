@@ -1,5 +1,5 @@
 # Wildfly Buildpack + PostgresSQL module JDBC
-Simple buildpack script for download and configure Wildfly Application Server + download and install MySQL Module Into. 
+Simple buildpack script for download and configure Wildfly Application Server + download and install PostgreSQL Module Into. 
 Based on Linux shell.
 
 Ready to use! 
