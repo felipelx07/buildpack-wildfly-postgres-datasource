@@ -2,13 +2,15 @@
 
 set -e
 
-BP_DIR="/../" # absolute path
-BIN_DIR=$BP_DIR/bin
-
 # parse args
 BUILD_DIR=$1
 CACHE_DIR=$2
 ENV_DIR=$3
+
+cd $BUILD_DIR
+
+BP_DIR="/.." # absolute path
+BIN_DIR=$BP_DIR/bin
 
 WILDFLY_VERSION="18.0.0.Final"
 WILDFLY_SHA1="2d4778b14fda6257458a26943ea82988e3ae6a66"
@@ -21,11 +23,9 @@ printf -- "#####################################################################
 printf -- "##              BUILDPACK WILDFLY POSTGRES DATASOURCE                ##\n"
 printf -- "#######################################################################\n"
 
-
-cd $BUILD_DIR
-
-rm -rf $JBOSS_HOME
-mkdir -p $JBOSS_HOME
+if [ -f "$JBOSS_HOME" ]; then
+	rm -rf $JBOSS_HOME
+fi
 
 printf -- ".\n"
 printf -- "..\n"
@@ -73,7 +73,7 @@ printf -- "----> moved\n"
 printf -- "..............................................................................\n"
 printf -- " Initializing and waiting for wildfly standalone gets up\n"
 printf -- "..............................................................................\n"
-sh $JBOSS_HOME/bin/standalone.sh -b=0.0.0.0 -Djboss.http.port=8080 > /dev\null 2>&1 &
+nohup $JBOSS_HOME/bin/standalone.sh -b=0.0.0.0 -Djboss.http.port=8080 > /dev\null 2>&1 &
 until $(curl --output /dev\null --silent --head --fail http://localhost:8080); do echo '.'; sleep 5; done
 
 cat << EOF > /tmp/wildfly-postgresql-installer
@@ -108,10 +108,12 @@ fi
 printf -- "------------------------------------------------------------------------------\n"
 printf -- "Create wildfly service on init.d
 printf -- "------------------------------------------------------------------------------\n"
+ln -s $JBOSS_HOME /opt/wildfly
 
 groupadd -r wildfly
-useradd -r -g wildfly -d $JBOSS_HOME -s /sbin/nologin wildfly
-chown -RH wildfly: $JBOSS_HOME
+useradd -r -g wildfly -d /opt/wildfly -s /sbin/nologin wildfly
+chown -RH wildfly: /opt/wildfly
+
 
  mkdir /etc/wildfly
  cp $JBOSS_HOME/docs/contrib/scripts/systemd/wildfly.conf /etc/wildfly/

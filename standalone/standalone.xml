@@ -158,11 +158,11 @@
                     </security>
                 </datasource>
 				<datasource jta="true" jndi-name="java:jboss/datasources/PostgresDS" pool-name="PostgresDS" enabled="true" use-ccm="false">
-                    <connection-url>jdbc:postgresql://localhost:5432/agrov</connection-url>
+                    <connection-url>${env.POSTGRES_DB_HOST}</connection-url>
                     <driver>postgres</driver>
                     <security>
-                        <user-name>postgres</user-name>
-                        <password>qwpo1209</password>
+                        <user-name>${env.POSTGRES_DB_USERNAME}</user-name>
+                        <password>${env.POSTGRES_DB_PASSWORD}</password>
                     </security>
                     <validation>
                         <valid-connection-checker class-name="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"/>
