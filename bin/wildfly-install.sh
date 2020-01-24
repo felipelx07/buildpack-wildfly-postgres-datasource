@@ -7,8 +7,6 @@ BUILD_DIR=$1
 CACHE_DIR=$2
 ENV_DIR=$3
 
-cd $BUILD_DIR
-
 BP_DIR="/.." # absolute path
 BIN_DIR=$BP_DIR/bin
 
@@ -18,13 +16,14 @@ POSTGRESL_DRIVER_VERSION="42.2.5"
 POSTGRES_DRIVER_SHA1="951b7eda125f3137538a94e2cbdcf744088ad4c2"
 JBOSS_HOME="/opt/wildfly-${WILDFLY_VERSION}"
 
+cd $BUILD_DIR
 
 printf -- "#######################################################################\n"
 printf -- "##              BUILDPACK WILDFLY POSTGRES DATASOURCE                ##\n"
 printf -- "#######################################################################\n"
 
 if [ -f "$JBOSS_HOME" ]; then
-	rm -rf $JBOSS_HOME
+        rm -rf $JBOSS_HOME
 fi
 
 printf -- ".\n"
@@ -34,12 +33,12 @@ printf -- "---------------------------------------------------------------------
 printf -- "Installing Wildfly ${WILDFLY_VERSION}\n"
 printf -- "------------------------------------------------------------------------------\n"
 if [ -f "$wildfly-$WILDFLY_VERSION.tar.gz" ]; then
-	printf -- "File already downloaded...\n"
-else 
+        printf -- "File already downloaded...\n"
+else
     curl -O https://download.jboss.org/wildfly/$WILDFLY_VERSION/wildfly-$WILDFLY_VERSION.tar.gz
-	printf -- "----> downloaded\n"
-	sha1sum wildfly-$WILDFLY_VERSION.tar.gz | grep $WILDFLY_SHA1 > /dev\null 2>&1
-	printf -- "----> verified\n"
+        printf -- "----> downloaded\n"
+        sha1sum wildfly-$WILDFLY_VERSION.tar.gz | grep $WILDFLY_SHA1 > /dev\null 2>&1
+        printf -- "----> verified\n"
 fi
 
 printf -- "----> Initializing extract tar wildfly-$WILDFLY_VERSION.tar.gz\n"
@@ -58,12 +57,12 @@ printf -- "---------------------------------------------------------------------
 printf -- "Installing PostgreSQL Wildfly module\n"
 printf -- "------------------------------------------------------------------------------\n"
 if [ -f "$postgresql-$POSTGRESL_DRIVER_VERSION.jar" ]; then
-	printf -- "----> PostgreSQL Driver already downloaded...\n"
+        printf -- "----> PostgreSQL Driver already downloaded...\n"
 else
-	curl -O https://repo1.maven.org/maven2/org/postgresql/postgresql/$POSTGRESL_DRIVER_VERSION/postgresql-$POSTGRESL_DRIVER_VERSION.jar
-	printf -- "----> downloaded\n"
-	sha1sum postgresql-$POSTGRESL_DRIVER_VERSION.jar | grep $POSTGRES_DRIVER_SHA1 > /dev\null 2>&1
-	printf -- "----> verified\n"
+        curl -O https://repo1.maven.org/maven2/org/postgresql/postgresql/$POSTGRESL_DRIVER_VERSION/postgresql-$POSTGRESL_DRIVER_VERSION.jar
+        printf -- "----> downloaded\n"
+        sha1sum postgresql-$POSTGRESL_DRIVER_VERSION.jar | grep $POSTGRES_DRIVER_SHA1 > /dev\null 2>&1
+        printf -- "----> verified\n"
 fi
 
 printf -- "----> moving postgresql-$POSTGRESL_DRIVER_VERSION.jar to $JBOSS_HOME\n"
@@ -79,7 +78,7 @@ until $(curl --output /dev\null --silent --head --fail http://localhost:8080); d
 cat << EOF > /tmp/wildfly-postgresql-installer
 connect
 module add --name=org.postgresql --resources=$JBOSS_HOME/postgresql-$POSTGRESL_DRIVER_VERSION.jar --dependencies=javax.api,javax.transaction.api
-/subsystem=datasources/jdbc-driver=postgresql:add(driver-name="postgresql",driver-module-name="org.postgresql",driver-class-name=org.postgresql.Driver)
+/subsystem=datasources/jdbc-driver=postgresql:add(driver-name="postgres",driver-module-name="org.postgresql",driver-class-name=org.postgresql.Driver)
 quit
 EOF
 
@@ -106,29 +105,25 @@ EOF
 fi
 
 printf -- "------------------------------------------------------------------------------\n"
-printf -- "Create wildfly service on init.d
+printf -- "Create wildfly service on init.d\n"
 printf -- "------------------------------------------------------------------------------\n"
-ln -s $JBOSS_HOME /opt/wildfly
 
+ln -s $JBOSS_HOME /opt/wildfly
 groupadd -r wildfly
 useradd -r -g wildfly -d /opt/wildfly -s /sbin/nologin wildfly
 chown -RH wildfly: /opt/wildfly
+mkdir /etc/wildfly
+cp $JBOSS_HOME/docs/contrib/scripts/systemd/wildfly.conf /etc/wildfly/
+cp $JBOSS_HOME/docs/contrib/scripts/systemd/wildfly.service /etc/systemd/system/
+cp $JBOSS_HOME/docs/contrib/scripts/systemd/launch.sh $JBOSS_HOME/bin/
 
-
- mkdir /etc/wildfly
- cp $JBOSS_HOME/docs/contrib/scripts/systemd/wildfly.conf /etc/wildfly/
- cp $JBOSS_HOME/docs/contrib/scripts/systemd/wildfly.service /etc/systemd/system/
- cp $JBOSS_HOME/docs/contrib/scripts/systemd/launch.sh $JBOSS_HOME/bin/
-
- systemctl enable wildfly
- systemctl start wildfly
-
+systemctl enable wildfly
+systemctl start wildfly
 
 cat << EOF > $BUILD_DIR/etc/default/wildfly.conf
 export JBOSS_HOME=${JBOSS_HOME}
 EOF
-
-printf -- "----> done!
+printf -- "----> done!\n"
 
 
 printf -- "#######################################################################\n"
